@@ -170,7 +170,7 @@ if __name__ == "__main__":
     parser.add_argument('--num-joints', type=int, default=7)
     parser.add_argument('--use-cuda', type=bool, default=False)
     parser.add_argument('--beta', type=float, default=1.0)
-    parser.add_argument('--generated-sample-size', type=bool, default=1000000)
+    parser.add_argument('--generated-sample-size', type=int, default=1000000)
 
     args, _ = parser.parse_known_args()
     train_and_inference(args)

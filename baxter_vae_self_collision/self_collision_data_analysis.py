@@ -1,14 +1,48 @@
 #!/usr/bin/env python
 # coding: utf-8
-from baxter_config import JOINT_LIMITS, JOINT_NAMES, get_headers_with_collision
+from baxter_config import JOINT_LIMITS, JOINT_NAMES, get_headers_with_collision, COLLISION_KEY
 from utils import find_data_file, get_path, parse_args
 from path_config import result_base_path, input_base_path, validated_output_base_path
 
 import argparse
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+
+"""
+Various statistics defined on the dataset
+"""
+
+def countSpillover(headers, dataset, limits):
+    """
+    Check for number of spillovers that are beyong hardware limits;
+    """
+    counts = {}
+    for joint in headers:
+        joint_limit = limits[joint]
+        joint_header = 'right_' + joint
+        joint_count = np.count_nonzero(np.logical_or(dataset[joint_header] < joint_limit[0],
+                                                     dataset[joint_header] > joint_limit[1]))
+        counts[joint_header] = joint_count / dataset.shape[0]
+    return counts
+
+def countSpilledProportion(headers, dataset, limits):
+    values = np.zeros(dataset.shape[0])
+    for joint in headers:
+        joint_limit = limits[joint]
+        joint_header = 'right_' + joint
+        values = np.logical_or(values, dataset[joint_header] < joint_limit[0])
+        values = np.logical_or(values, dataset[joint_header] > joint_limit[1])
+
+    rows = values.nonzero()[0]
+    print("The joint limits are: %s" % limits)
+    print("Examples of samples that are outside of hardware limits: ")
+    print(dataset.iloc[rows].iloc[0:5, :])
+    # assert np.sum(dataset.iloc[rows][COLLISION_KEY] == np.zeros(len(rows))) == len(rows), \
+        # "Some out of range configurations are collision-free!"
+    return np.count_nonzero(values) / dataset.shape[0]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -70,7 +104,7 @@ if __name__ == "__main__":
     Plots for both sampled and original data;
     """
     original_data = pd.read_csv(original_data_file_name, usecols=headers_w_collision)
-    original_data_free = original_data[original_data['inCollision'] == 1]
+    original_data_free = original_data[original_data['collisionFree'] == 1]
     i = 1
     fig = plt.figure(figsize=(10,10))
     for joint_name in JOINT_NAMES:
@@ -92,5 +126,18 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig(output_dir + "sample_and_original_distribution" + '.png')
 
+    # TODO: Use visitor pattern to gather statistics on the data;
+    # Analysis on the statistics on the data;
+    accuracy = data[data[COLLISION_KEY] == 1].shape[0] / data.shape[0]
+    spill_over_counts = countSpillover(JOINT_NAMES, data, JOINT_LIMITS)
+    total_proportion = countSpilledProportion(JOINT_NAMES, data, JOINT_LIMITS)
 
+    stats = {
+        "num_samples": data.shape[0],
+        "accuracy": accuracy,
+        "spill_over_counts": spill_over_counts,
+        "spill_over_proportion": total_proportion
+    }
 
+    with open(output_dir + "statistics.json", "w") as fp:
+        json.dump(stats, fp)

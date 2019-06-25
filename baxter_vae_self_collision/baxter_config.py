@@ -11,7 +11,7 @@ JOINT_LIMITS = {
     'w2': [-3.059, 3.059]
 }
 
-COLLISION_KEY = 'inCollision'
+COLLISION_KEY = 'collisionFree'
 
 def get_limb_headers(limb_name):
     return [limb_name + "_" + joint_name for joint_name in JOINT_NAMES]
