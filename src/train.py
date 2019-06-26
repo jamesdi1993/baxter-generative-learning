@@ -3,10 +3,10 @@ from os.path import join
 from torch import optim
 from torch.utils.data import DataLoader
 
-from baxter_config import JOINT_NAMES, get_headers_with_collision,get_joint_names, get_limb_headers, get_joint_limits
-from vae import VAE, train, test, generate_samples
-from utils import normalize_data, plot_loss, write_samples_to_csv, find_data_file, get_path, parse_args
-from path_config import input_base_path, output_base_path, model_base_path, result_base_path
+from src.baxter_config import JOINT_NAMES, get_headers_with_collision,get_joint_names, get_limb_headers, get_joint_limits
+from src.vae import VAE, train, test, generate_samples
+from src.utils import normalize_data, plot_loss, write_samples_to_csv, find_data_file, get_path, parse_args, tic, toc
+from src.path_config import input_base_path, output_base_path, model_base_path, result_base_path
 
 import argparse
 import pandas as pd
@@ -19,6 +19,7 @@ def load_and_preprocess_data(file_name, headers, joint_limits, batch_size, norma
     """
     Load and preprocess data; 
     """
+    print("Loading data from file: %s" % file_name)
     # Set headers;
     input_data = pd.read_csv(file_name, usecols=headers)
 
@@ -42,12 +43,12 @@ def load_and_preprocess_data(file_name, headers, joint_limits, batch_size, norma
     train_y = y[:cutoff]
     test_y = y[cutoff:]
 
-    train_free_y = train_y[train_y == 1]
+    # train_free_y = train_y[train_y == 1]
     train_free_X = train_X[train_y == 1]
     print("The number of samples in train_free is: %s" % train_free_X.shape[0])
 
     test_free_X = test_X[test_y == 1]
-    test_free_y = test_y[test_y == 1]
+    # test_free_y = test_y[test_y == 1]
     print("The number of samples in test_free is: %s" % test_free_X.shape[0])
 
     train_loader = DataLoader(train_free_X, batch_size=batch_size,
@@ -56,7 +57,7 @@ def load_and_preprocess_data(file_name, headers, joint_limits, batch_size, norma
 
     return train_loader, test_loader
 
-def train_and_inference(args):
+def main(args):
     # Hyperparamters Example
     """
     batch_size = 1000
@@ -72,22 +73,23 @@ def train_and_inference(args):
     """
     print("The arguments are: \n" + str(args))
 
-    # Flexible param;
-    beta = args.beta
+    label = args.label
+    env = args.env
 
-    # Fixed parameters;
+    # hyperparams param;
+    beta = args.beta
     batch_size = args.batch_size
     learning_rate = args.learning_rate
     num_joints = args.num_joints
     h_dim1 = args.h_dim1
     h_dim2 = args.h_dim2
     d_output = args.d_output
-    generated_sample_size = args.generated_sample_size
     epochs = args.epochs
+    generated_sample_size = args.generated_sample_size
 
     # Get headers and joint limits
     selected_joints = JOINT_NAMES[0:num_joints]
-    headers_with_collision = get_headers_with_collision(selected_joints)
+    headers_with_collision = get_headers_with_collision(selected_joints, env, label)
     print("The headers with collisions are: %s" % headers_with_collision)
 
     joint_limits = get_joint_limits(selected_joints)
@@ -106,10 +108,13 @@ def train_and_inference(args):
     training_losses = []
     test_loss = math.inf
     for epoch in range(1, epochs + 1):
+      start = tic()
       mu, logvar, train_loss, recon_loss, kld = train(model=model, optimizer=optimizer, device=device, epoch=epoch,
                                                       train_loader=train_loader, kld_weight = beta)
+      toc(start)
       training_losses.append((train_loss, recon_loss, kld))
       test_loss = test(model=model, epoch=epoch, device=device, test_loader=test_loader, kld_weight = beta)
+      toc(start)
 
     # Print out metric for evaluation.
     print("Final average test loss: {:.4f};".format(test_loss))
@@ -122,9 +127,8 @@ def train_and_inference(args):
         os.makedirs(result_dir)
     plot_loss(t, total_loss, recon_loss, kld_loss, result_dir)
 
-    # Generate samples
+    # Sample from data
     configs_written = 0
-    size = batch_size
     write_header = True
     joint_names = get_joint_names(selected_joints)
     complete_headers = get_limb_headers('right')
@@ -135,6 +139,9 @@ def train_and_inference(args):
         os.makedirs(output_dir)
     file_name = join(output_dir, "right_" + str(num_joints) + '_' + str(generated_sample_size) + '.csv')
     print("Writing samples to: %s" % (file_name))
+
+    size = batch_size
+    # write data to file;
     for i in range(math.ceil(generated_sample_size / batch_size)):
         print("Writing the %dth batch" % i)
         if generated_sample_size - configs_written < batch_size:
@@ -158,21 +165,25 @@ def train_and_inference(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    # hyperparameters sent by the client are passed as command-line arguments to the script.
+    # dataset configurations
+    parser.add_argument('--label', default='self')
+    parser.add_argument('--env')
+
+    # hyperparameters
     parser.add_argument('--h-dim1', type=int, default=256)
     parser.add_argument('--h-dim2', type=int, default=100)
     parser.add_argument('--d-output', type=int, default=7)
     parser.add_argument('--batch-size', type=int, default=1000)
-    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--learning-rate', type=float, default=0.01)
+    parser.add_argument('--use-cuda', type=bool, default=False)
+    parser.add_argument('--beta', type=float, default=1.0)
 
     # Fixed static parameters;
     parser.add_argument('--num-joints', type=int, default=7)
-    parser.add_argument('--use-cuda', type=bool, default=False)
-    parser.add_argument('--beta', type=float, default=1.0)
     parser.add_argument('--generated-sample-size', type=int, default=1000000)
 
     args, _ = parser.parse_known_args()
-    train_and_inference(args)
+    main(args)
 
 

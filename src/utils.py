@@ -1,7 +1,7 @@
 from pandas import Series
 from os.path import join, isfile
-from baxter_config import get_limb_headers, get_joint_names, JOINT_NAMES
-from path_config import test_output_base_path, PATH_ARGS
+from src.baxter_config import get_limb_headers, get_joint_names, JOINT_NAMES
+from src.path_config import test_output_base_path, PATH_ARGS
 
 import argparse
 import csv
@@ -9,9 +9,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+import time
 
 # Training configs
 limit = 10000000  # set limit on number of points when reading the configurations
+
+def tic():
+    return time.time()
+
+def toc(start):
+    time_elapsed = time.time() - start
+    print("Elasped time: %s" % time_elapsed)
 
 def get_path(base_path, path_args):
     # Get the path for the output dir
@@ -47,7 +55,6 @@ def find_data_file(path, num_joints):
             break
         elif num_samples > limit:
             raise IOError("Number of samples is greater than limit. Num of samples: " + str(num_samples))
-    print("Loading data from file: %s" % (file_name,))
     return file_name
 
 # Data normalization

@@ -1,48 +1,53 @@
-FROM ubuntu:16.04
+# Modified from: https://github.com/anibali/docker-pytorch/blob/master/cuda-10.0/Dockerfile
+FROM nvidia/cuda:10.0-base-ubuntu16.04
 
-ARG py_version
+# Install some basic utilities
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    sudo \
+    git \
+    bzip2 \
+    libx11-6 \
+ && rm -rf /var/lib/apt/lists/*
 
-# Validate that arguments are specified
-RUN test $py_version || exit 1
+# Create a non-root user and switch to it
+RUN adduser --disabled-password --gecos '' --shell /bin/bash user
+RUN echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-user
+USER user
 
-# Install python and nginx
-RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
-    add-apt-repository ppa:deadsnakes/ppa -y && \
-    apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-        curl \
-        jq \
-        nginx && \
-    if [ $py_version -eq 3 ]; \
-       then apt-get install -y --no-install-recommends python3.6-dev \
-           && ln -s -f /usr/bin/python3.6 /usr/bin/python; \
-       else apt-get install -y --no-install-recommends python-dev; fi && \
-    rm -rf /var/lib/apt/lists/* \
-    rm -rf /root/.cache
+# All users can use /home/user as their home directory
+ENV HOME=/home/user
+RUN chmod 777 /home/user
 
-# Install pip
-RUN cd /tmp && \
-    curl -O https://bootstrap.pypa.io/get-pip.py && \
-    python get-pip.py 'pip<=18.1' && rm get-pip.py
+# Install Miniconda
+RUN curl -so ~/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh \
+ && chmod +x ~/miniconda.sh \
+ && ~/miniconda.sh -b -p ~/miniconda \
+ && rm ~/miniconda.sh
+ENV PATH=/home/user/miniconda/bin:$PATH
+ENV CONDA_AUTO_UPDATE_CONDA=false
 
-# Python won’t try to write .pyc or .pyo files on the import of source modules
-# Force stdin, stdout and stderr to be totally unbuffered. Good for logging
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONIOENCODING=UTF-8 LANG=C.UTF-8 LC_ALL=C.UTF-8
+# Create a Python 3.6 environment
+RUN /home/user/miniconda/bin/conda install conda-build \
+ && /home/user/miniconda/bin/conda create -y --name py36 python=3.6.5 \
+ && /home/user/miniconda/bin/conda clean -ya
+ENV CONDA_DEFAULT_ENV=py36
+ENV CONDA_PREFIX=/home/user/miniconda/envs/$CONDA_DEFAULT_ENV
+ENV PATH=$CONDA_PREFIX/bin:$PATH
 
-# Install dependencies from pip
-RUN if [ $py_version -eq 3 ]; \
-        then pip install --no-cache-dir http://download.pytorch.org/whl/cpu/torch-1.0.0-cp36-cp36m-linux_x86_64.whl fastai; \
-        else pip install --no-cache-dir http://download.pytorch.org/whl/cpu/torch-1.0.0-cp27-cp27mu-linux_x86_64.whl; fi && \
-    pip install --no-cache-dir Pillow retrying six torchvision
+# CUDA 10.0-specific steps
+RUN conda install -y -c pytorch \
+    cuda100=1.0 \
+    magma-cuda100=2.4.0 \
+    "pytorch=1.0.0=py3.6_cuda10.0.130_cudnn7.4.1_1" \
+    torchvision=0.2.1 \
+    pandas \
+    matplotlib \
+ && conda clean -ya
 
-COPY vae_mnist_train.py /opt/program/train
-RUN chmod +x /opt/program/train
+# Install Torchnet, a high-level framework for PyTorch
+# RUN pip install torchnet==0.0.4
 
-ENV PATH="/opt/program:${PATH}"
-
-WORKDIR /opt/program
-
-ENTRYPOINT ["python", "train"]
-
-
-
+RUN mkdir /home/user/baxter_vae_collision # Create a working directory
+WORKDIR /home/user/baxter_vae_collision

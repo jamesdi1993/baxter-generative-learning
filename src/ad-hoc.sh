@@ -3,7 +3,7 @@ beta_array=(0.05)
 num_joints=7
 
 # Activate Python3 env;
-. activate baxter_vae_self_collision
+. activate baxter_vae_collision
 # Train and make inference;
 for beta in "${beta_array[@]}"
 do
