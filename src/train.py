@@ -86,6 +86,7 @@ def main(args):
     d_output = args.d_output
     epochs = args.epochs
     generated_sample_size = args.generated_sample_size
+    use_cuda = args.use_cuda
 
     # Get headers and joint limits
     selected_joints = JOINT_NAMES[0:num_joints]
@@ -101,7 +102,8 @@ def main(args):
                                                          batch_size, normalization=False)
 
     # Process
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() and use_cuda else "cpu")
+    print("Using device: %s" % device)
     model = VAE(num_joints, h_dim1, h_dim2, d_output).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
