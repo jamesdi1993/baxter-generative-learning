@@ -176,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument('--h-dim2', type=int, default=100)
     parser.add_argument('--d-output', type=int, default=7)
     parser.add_argument('--batch-size', type=int, default=1000)
-    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--learning-rate', type=float, default=0.01)
     parser.add_argument('--use-cuda', type=bool, default=False)
     parser.add_argument('--beta', type=float, default=1.0)
