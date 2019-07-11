@@ -15,6 +15,8 @@ import numpy as np
 import os
 import torch
 
+END_EFFECTOR_NAMES = ['x', 'y', 'z']
+
 def load_and_preprocess_data(file_name, data_headers, label_header, joint_limits, batch_size, normalization=False):
     """
     Load and preprocess data; 
@@ -101,8 +103,8 @@ def main(args):
     # headers_with_collision = get_headers_with_collision(selected_joints, env, label)
 
     if include_pos:
-        data_headers += ['x','y','z'] # add x,y,z into headers
-        d_input += 3
+        data_headers += END_EFFECTOR_NAMES # add x,y,z into headers
+        d_input += len(END_EFFECTOR_NAMES)
     print("The data headers are: %s" % data_headers)
 
     joint_limits = get_joint_limits(selected_joints)
@@ -144,8 +146,12 @@ def main(args):
     # Sample from data
     configs_written = 0
     write_header = True
+
     joint_names = get_joint_names(selected_joints)
     complete_headers = get_limb_headers('right')
+    if include_pos:
+        joint_names += END_EFFECTOR_NAMES
+        complete_headers += END_EFFECTOR_NAMES
 
     # Find the path to write to;
     output_dir = get_path(output_base_path, path_args)
