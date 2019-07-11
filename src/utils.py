@@ -47,14 +47,15 @@ def find_data_file(path, num_joints):
     file_name = ''
     files = [f for f in os.listdir(path) if isfile(join(path, f))]
     for f in files:
-        f_name = f.replace('.csv', '')
-        joints = int(f_name.split('_')[1])
-        num_samples = int(f_name.split('_')[2])
-        if joints == num_joints and num_samples < limit:
-            file_name = join(path, f)
-            break
-        elif num_samples > limit:
-            raise IOError("Number of samples is greater than limit. Num of samples: " + str(num_samples))
+        if f.endswith('.csv'):
+            f_name = f.replace('.csv', '')
+            joints = int(f_name.split('_')[1])
+            num_samples = int(f_name.split('_')[2])
+            if joints == num_joints and num_samples < limit:
+                file_name = join(path, f)
+                break
+            elif num_samples > limit:
+                raise IOError("Number of samples is greater than limit. Num of samples: " + str(num_samples))
     return file_name
 
 # Data normalization

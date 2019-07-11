@@ -3,7 +3,7 @@ from os.path import join
 from torch import optim
 from torch.utils.data import DataLoader
 
-from src.baxter_config import JOINT_NAMES, get_headers_with_collision,get_joint_names, get_limb_headers, get_joint_limits
+from src.baxter_config import JOINT_NAMES, get_joint_names, get_collision_header, get_limb_headers, get_joint_limits
 from src.vae import VAE, train, test, generate_samples
 from src.utils import normalize_data, plot_loss, write_samples_to_csv, find_data_file, get_path, parse_args, tic, toc
 from src.path_config import input_base_path, output_base_path, model_base_path, result_base_path
@@ -15,20 +15,23 @@ import numpy as np
 import os
 import torch
 
-def load_and_preprocess_data(file_name, headers, joint_limits, batch_size, normalization=False):
+def load_and_preprocess_data(file_name, data_headers, label_header, joint_limits, batch_size, normalization=False):
     """
     Load and preprocess data; 
     """
     print("Loading data from file: %s" % file_name)
     # Set headers;
+    headers = data_headers + [label_header]
     input_data = pd.read_csv(file_name, usecols=headers)
 
-    # Additional step to preserve the header order when reading data;
-    data = input_data[headers].values
+    print("The first 5 values from the dataset are: %s" % input_data.values[0:5, :])
 
-    print("The first 5 values from the dataset are: %s" % data[0:5, :])
-    X = data[:, :-1]
-    y = data[:, -1]
+    # Additional step to preserve the header order when reading data;
+    X = input_data[data_headers].values
+    y = input_data[label_header].values
+
+    print("The first 5 values from X are: %s" % X[0:5, :])
+    print("The first 5 values from y are: %s" % y[0:5])
 
     # normalize data if needed
     if normalization:
@@ -81,30 +84,39 @@ def main(args):
     batch_size = args.batch_size
     learning_rate = args.learning_rate
     num_joints = args.num_joints
+    d_input = num_joints
     h_dim1 = args.h_dim1
     h_dim2 = args.h_dim2
     d_output = args.d_output
     epochs = args.epochs
     generated_sample_size = args.generated_sample_size
     use_cuda = args.use_cuda
+    include_pos = args.include_pos
 
     # Get headers and joint limits
     selected_joints = JOINT_NAMES[0:num_joints]
-    headers_with_collision = get_headers_with_collision(selected_joints, env, label)
-    print("The headers with collisions are: %s" % headers_with_collision)
+
+    data_headers = get_joint_names(selected_joints)
+    label_header = get_collision_header(env, label)
+    # headers_with_collision = get_headers_with_collision(selected_joints, env, label)
+
+    if include_pos:
+        data_headers += ['x','y','z'] # add x,y,z into headers
+        d_input += 3
+    print("The data headers are: %s" % data_headers)
 
     joint_limits = get_joint_limits(selected_joints)
     print("The joint limits are: %s" % joint_limits)
 
     # Load data
     data_file_name = find_data_file(input_base_path, num_joints)
-    train_loader, test_loader = load_and_preprocess_data(data_file_name, headers_with_collision, joint_limits,
+    train_loader, test_loader = load_and_preprocess_data(data_file_name, data_headers, label_header, joint_limits,
                                                          batch_size, normalization=False)
 
     # Process
     device = torch.device("cuda" if torch.cuda.is_available() and use_cuda else "cpu")
     print("Using device: %s" % device)
-    model = VAE(num_joints, h_dim1, h_dim2, d_output).to(device)
+    model = VAE(d_input, h_dim1, h_dim2, d_output).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     training_losses = []
@@ -180,6 +192,7 @@ if __name__ == "__main__":
     parser.add_argument('--learning-rate', type=float, default=0.01)
     parser.add_argument('--use-cuda', type=bool, default=False)
     parser.add_argument('--beta', type=float, default=1.0)
+    parser.add_argument('--include-pos', type=bool, default=False)
 
     # Fixed static parameters;
     parser.add_argument('--num-joints', type=int, default=7)

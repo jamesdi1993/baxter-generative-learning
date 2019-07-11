@@ -23,15 +23,23 @@ def get_limb_headers(limb_name):
 def get_joint_names(joints):
     return ['right_' + joint_name for joint_name in joints]
 
-def get_headers_with_collision(joints, env, label):
-    headers = get_joint_names(joints)
+def get_collision_header(env, label):
     if label == 'self':
-        headers.append(SELF_COLLISION_KEY)
+        return SELF_COLLISION_KEY
     elif label == 'env':
-        headers.append(get_label_name(env))
+        return get_label_name(env)
     else:
         raise RuntimeError("Invalid label for header: %s" % label)
-    return headers
+
+# def get_headers_with_collision(joints, env, label):
+#     headers = get_joint_names(joints)
+#     if label == 'self':
+#         headers.append(SELF_COLLISION_KEY)
+#     elif label == 'env':
+#         headers.append(get_label_name(env))
+#     else:
+#         raise RuntimeError("Invalid label for header: %s" % label)
+#     return headers
 
 def get_joint_limits(joints):
     joint_limits = [JOINT_LIMITS[joint] for joint in joints]
