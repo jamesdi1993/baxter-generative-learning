@@ -1,5 +1,5 @@
-from utils import get_path, parse_args, find_data_file
-from path_config import output_base_path, ros_base_path
+from src.utils import get_path, parse_args, find_data_file
+from src.path_config import output_base_path, ros_base_path
 
 import argparse
 import os
@@ -13,6 +13,7 @@ if __name__ == "__main__":
     # hyperparameters sent by the client are passed as command-line arguments to the script.
     parser.add_argument('--beta', type=float, default=1.0)
     parser.add_argument('--num-joints', type = int, default= 7)
+    parser.add_argument('--env')
 
     # Fixed static parameters;
     parser.add_argument('--h-dim1', type=int, default=256)
@@ -28,7 +29,7 @@ if __name__ == "__main__":
 
     # Find the path to write to;
     path_args = parse_args(args)
-    output_dir = get_path(output_base_path, path_args)
+    output_dir = get_path(output_base_path % args.env, path_args)
     src_file = find_data_file(output_dir, args.num_joints)
 
     dst_dir = get_path(ros_base_path + "input/", path_args)

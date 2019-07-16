@@ -31,15 +31,10 @@ def get_collision_header(env, label):
     else:
         raise RuntimeError("Invalid label for header: %s" % label)
 
-# def get_headers_with_collision(joints, env, label):
-#     headers = get_joint_names(joints)
-#     if label == 'self':
-#         headers.append(SELF_COLLISION_KEY)
-#     elif label == 'env':
-#         headers.append(get_label_name(env))
-#     else:
-#         raise RuntimeError("Invalid label for header: %s" % label)
-#     return headers
+def get_headers_with_collision(joints, env, label):
+    headers = get_joint_names(joints)
+    headers.append(get_collision_header(env, label))
+    return headers
 
 def get_joint_limits(joints):
     joint_limits = [JOINT_LIMITS[joint] for joint in joints]

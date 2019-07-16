@@ -111,7 +111,7 @@ def main(args):
     print("The joint limits are: %s" % joint_limits)
 
     # Load data
-    data_file_name = find_data_file(input_base_path, num_joints)
+    data_file_name = find_data_file(input_base_path % env, num_joints)
     train_loader, test_loader = load_and_preprocess_data(data_file_name, data_headers, label_header, joint_limits,
                                                          batch_size, normalization=False)
 
@@ -138,7 +138,7 @@ def main(args):
     t = range(1, epochs + 1)
 
     path_args = parse_args(args)
-    result_dir = get_path(result_base_path, path_args)
+    result_dir = get_path(result_base_path % env, path_args)
     if not os.path.exists(result_dir):
         os.makedirs(result_dir)
     plot_loss(t, total_loss, recon_loss, kld_loss, result_dir)
@@ -154,7 +154,7 @@ def main(args):
         complete_headers += END_EFFECTOR_NAMES
 
     # Find the path to write to;
-    output_dir = get_path(output_base_path, path_args)
+    output_dir = get_path(output_base_path % env, path_args)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     file_name = join(output_dir, "right_" + str(num_joints) + '_' + str(generated_sample_size) + '.csv')
@@ -174,7 +174,7 @@ def main(args):
         configs_written += size
 
     # Write model artifacts to directory;
-    model_directory = get_path(model_base_path, path_args)
+    model_directory = get_path(model_base_path % env, path_args)
     if not os.path.exists(model_directory):
         os.makedirs(model_directory)
     with open(os.path.join(model_directory, 'model.pth'), 'wb') as f:
@@ -197,8 +197,8 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--learning-rate', type=float, default=0.01)
     parser.add_argument('--beta', type=float, default=1.0)
-    parser.add_argument('--use-cuda', type=bool, default=False)
-    parser.add_argument('--include-pos', type=bool, default=False)
+    parser.add_argument('--use-cuda', action='store_true')
+    parser.add_argument('--include-pos', action='store_true')
 
     # Fixed static parameters;
     parser.add_argument('--num-joints', type=int, default=7)
