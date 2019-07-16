@@ -2,9 +2,8 @@ version: '2'
 services:
   vae-training:
     build: .
-    command: python -m src.train --label self --env one_box_environment --use-cuda true --batch-size 1000 --epochs 100
+    command: python -m src.train --label env --env one_box_environment --use-cuda true --batch-size 1000 --epochs 10 --d-output 3 --include-pos true --beta 1.0
     volumes:
-    - /home/jamesdi/workspace/baxter_vae_collision:/home/user/baxter_vae_collision
+    - /home/jamesdi/workspace/baxter_vae_collision:/home/user/baxter_vae_collision 
     environment:
-    - NVIDIA_VISIBLE_DEVICES=2
-
+    - NVIDIA_VISIBLE_DEVICES=3

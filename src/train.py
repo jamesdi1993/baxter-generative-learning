@@ -163,7 +163,7 @@ def main(args):
     size = batch_size
     # write data to file;
     for i in range(math.ceil(generated_sample_size / batch_size)):
-        print("Writing the %dth batch" % i)
+        # print("Writing the %dth batch" % i)
         if generated_sample_size - configs_written < batch_size:
             size = generated_sample_size - configs_written
         samples = generate_samples(size, d_output, device, model)
@@ -196,8 +196,8 @@ if __name__ == "__main__":
     parser.add_argument('--batch-size', type=int, default=1000)
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--learning-rate', type=float, default=0.01)
-    parser.add_argument('--use-cuda', type=bool, default=False)
     parser.add_argument('--beta', type=float, default=1.0)
+    parser.add_argument('--use-cuda', type=bool, default=False)
     parser.add_argument('--include-pos', type=bool, default=False)
 
     # Fixed static parameters;
@@ -205,6 +205,7 @@ if __name__ == "__main__":
     parser.add_argument('--generated-sample-size', type=int, default=1000000)
 
     args, _ = parser.parse_known_args()
+    print("The arguments are: %s" % (args,))
     main(args)
 
 
