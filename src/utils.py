@@ -1,7 +1,7 @@
 from pandas import Series
 from os.path import join, isfile
 from src.baxter_config import get_limb_headers, get_joint_names, JOINT_NAMES
-from src.path_config import test_output_base_path, PATH_ARGS
+from src.path_config import TEST_OUTPUT_BASE_PATH, PATH_ARGS
 
 import argparse
 import csv
@@ -147,7 +147,7 @@ def test_write_samples_to_csv():
         "num_joints": num_joints,
         "beta": beta
     }
-    output_dir = get_path(test_output_base_path, path_args)
+    output_dir = get_path(TEST_OUTPUT_BASE_PATH, path_args)
     if not os.path.exists(output_dir):
       os.makedirs(output_dir)
 
@@ -161,7 +161,7 @@ def plot_loss(epochs, total, reconstruction, divergence, path):
     plt.plot(epochs, divergence, color = 'green', label = 'Divergence Loss')
     plt.legend()
     plt.title("Training cost functions")
-    plt.savefig(path + "training_loss.png")
+    plt.savefig(os.path.join(path + "training_loss.png"))
 
 def test_get_path():
     print("Testing path...")

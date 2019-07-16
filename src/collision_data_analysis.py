@@ -2,7 +2,7 @@
 # coding: utf-8
 from src.baxter_config import JOINT_LIMITS, JOINT_NAMES, get_headers_with_collision, get_collision_header
 from src.utils import find_data_file, get_path, parse_args
-from src.path_config import result_base_path, input_base_path, validated_output_base_path
+from src.path_config import INPUT_BASE_PATH, VALIDATED_OUTPUT_TEMPLATE, OUTPUT_BASE_PATH
 
 import argparse
 import json
@@ -86,6 +86,7 @@ if __name__ == "__main__":
     parser.add_argument('--beta', type=float, default=1.0)
     parser.add_argument('--env')
     parser.add_argument('--label')
+    parser.add_argument('--run-id')
     parser.add_argument('--dry-run', action='store_true')
 
     args, _ = parser.parse_known_args()
@@ -95,28 +96,28 @@ if __name__ == "__main__":
     env = args.env
     dry_run = args.dry_run
     label = args.label
+    run_id = args.run_id
 
     # Get the collision label
     collision_label = get_collision_header(env, label)
 
     path_args = parse_args(args)
     # print("The path args is: %s" % (path_args,))
-    validated_output_path = get_path(validated_output_base_path % env, path_args)
-    file_name = find_data_file(validated_output_path, num_joints)
-    original_data_file_name = find_data_file(input_base_path % env, num_joints)
+    validated_file = VALIDATED_OUTPUT_TEMPLATE % (env, run_id)
+    original_data_file_name = find_data_file(INPUT_BASE_PATH % env, num_joints)
 
-    output_dir = get_path(result_base_path % env, path_args)
+    output_dir = OUTPUT_BASE_PATH % (env, run_id)
     if not os.path.exists(output_dir):
       os.makedirs(output_dir)
 
-    print("The validated file is: %s" % file_name)
+    print("The validated file is: %s" % validated_file)
     print("The output directory is: %s" % output_dir)
     print("The original data file is: %s" % original_data_file_name)
 
     if not dry_run:
         selected_joints = JOINT_NAMES[0:num_joints]
         headers_w_collision = get_headers_with_collision(selected_joints, env, label)
-        data = pd.read_csv(file_name, usecols=headers_w_collision)
+        data = pd.read_csv(validated_file, usecols=headers_w_collision)
 
         for joint in JOINT_NAMES:
             joint_name = 'right_' + joint

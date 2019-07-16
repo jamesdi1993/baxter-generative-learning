@@ -5,8 +5,8 @@ from torch.utils.data import DataLoader
 
 from src.baxter_config import JOINT_NAMES, get_joint_names, get_collision_header, get_limb_headers, get_joint_limits
 from src.vae import VAE, train, test, generate_samples
-from src.utils import normalize_data, plot_loss, write_samples_to_csv, find_data_file, get_path, parse_args, tic, toc
-from src.path_config import input_base_path, output_base_path, model_base_path, result_base_path
+from src.utils import normalize_data, plot_loss, write_samples_to_csv, find_data_file, tic, toc
+from src.path_config import INPUT_BASE_PATH, OUTPUT_BASE_PATH, SAMPLED_OUTPUT_TEMPLATE, get_run_id
 
 import argparse
 import pandas as pd
@@ -86,7 +86,9 @@ def main(args):
     batch_size = args.batch_size
     learning_rate = args.learning_rate
     num_joints = args.num_joints
+
     d_input = num_joints
+
     h_dim1 = args.h_dim1
     h_dim2 = args.h_dim2
     d_output = args.d_output
@@ -111,7 +113,7 @@ def main(args):
     print("The joint limits are: %s" % joint_limits)
 
     # Load data
-    data_file_name = find_data_file(input_base_path % env, num_joints)
+    data_file_name = find_data_file(INPUT_BASE_PATH % env, num_joints)
     train_loader, test_loader = load_and_preprocess_data(data_file_name, data_headers, label_header, joint_limits,
                                                          batch_size, normalization=False)
 
@@ -137,11 +139,12 @@ def main(args):
     total_loss, recon_loss, kld_loss = zip(*training_losses)
     t = range(1, epochs + 1)
 
-    path_args = parse_args(args)
-    result_dir = get_path(result_base_path % env, path_args)
-    if not os.path.exists(result_dir):
-        os.makedirs(result_dir)
-    plot_loss(t, total_loss, recon_loss, kld_loss, result_dir)
+    args.d_input = d_input
+    run_id = get_run_id(args)
+    output_directory = OUTPUT_BASE_PATH % (env, run_id)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+    plot_loss(t, total_loss, recon_loss, kld_loss, output_directory)
 
     # Sample from data
     configs_written = 0
@@ -153,11 +156,7 @@ def main(args):
         joint_names += END_EFFECTOR_NAMES
         complete_headers += END_EFFECTOR_NAMES
 
-    # Find the path to write to;
-    output_dir = get_path(output_base_path % env, path_args)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    file_name = join(output_dir, "right_" + str(num_joints) + '_' + str(generated_sample_size) + '.csv')
+    file_name = SAMPLED_OUTPUT_TEMPLATE % (env, run_id)
     print("Writing samples to: %s" % (file_name))
 
     size = batch_size
@@ -173,14 +172,9 @@ def main(args):
                              complete_headers, write_header=write_header, print_frame=False)
         configs_written += size
 
-    # Write model artifacts to directory;
-    model_directory = get_path(model_base_path % env, path_args)
-    if not os.path.exists(model_directory):
-        os.makedirs(model_directory)
-    with open(os.path.join(model_directory, 'model.pth'), 'wb') as f:
+    with open(os.path.join(output_directory, 'model.pth'), 'wb') as f:
         torch.save(model.state_dict(), f)
-
-    return file_name
+    return output_directory
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -204,8 +198,10 @@ if __name__ == "__main__":
     parser.add_argument('--num-joints', type=int, default=7)
     parser.add_argument('--generated-sample-size', type=int, default=1000000)
 
+
+    # Later to be modified in the script
+    parser.add_argument('--d_input', type=int)
+
     args, _ = parser.parse_known_args()
-    print("The arguments are: %s" % (args,))
-    main(args)
-
-
+    output_directory = main(args)
+    print("Result saved to: %s" % output_directory)
