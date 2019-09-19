@@ -198,7 +198,6 @@ if __name__ == "__main__":
     parser.add_argument('--num-joints', type=int, default=7)
     parser.add_argument('--generated-sample-size', type=int, default=1000000)
 
-
     # Later to be modified in the script
     parser.add_argument('--d_input', type=int)
 

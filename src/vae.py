@@ -27,7 +27,7 @@ class VAE(nn.Module):
         h2 = F.elu(self.fc2(h1))
         return self.mean(h2), self.logvar(h2)
 
-    # Reparametrize the normal;
+    # Reparameterize the normal;
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
@@ -48,7 +48,6 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function_bce(recon_x, x, mu, logvar, beta, num_joints):
     recon_loss = F.binary_cross_entropy(recon_x, x.view(-1, num_joints), reduction='sum')
@@ -58,7 +57,6 @@ def loss_function_bce(recon_x, x, mu, logvar, beta, num_joints):
     # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     return recon_loss + beta * KLD, recon_loss, KLD
-
 
 # Reconstruction + KL divergence losses summed over all elements and batch
 # Beta is a parameter for balancing between kld and recon cost;
